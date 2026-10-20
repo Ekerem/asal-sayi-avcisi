@@ -1,0 +1,5 @@
+# İmza anahtarları asla depoya girmez
+*.keystore
+*.jks
+android/kaynak/build/
+android/kaynak/assets/
