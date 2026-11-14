@@ -324,6 +324,7 @@ body.intro-open .tray {
     <p>Tablodaki <b>74 bileşik sayının</b> hepsini buzladın. Buzlanmayan sayılardan <b>25 tanesi asal sayı</b>:</p>
     <div class="primes" id="primeList"></div>
     <p class="note">Asal sayılar yalnızca 1'e ve kendisine bölünür. Tabloda kırmızıyla gösterilen <b>1</b> ise asal sayı değildir. 1 asal da değil, bileşik de değildir; bu yüzden o da buzlanmadı.</p>
+    <p class="note" id="winStats"></p>
     <div class="row">
       <button class="ghost" id="viewBtn" type="button">Tabloya bak</button>
       <button class="primary" id="againBtn" type="button">Yeniden oyna</button>
@@ -428,34 +429,45 @@ body.intro-open .tray {
   }
 
   // core rule
+  // ders sonu özeti için deneme kaydı
+  var stats = { ok: 0, bad: 0, primes: {}, cards: {} };
+  function miss(d, n, prime) { stats.bad++; stats.cards[d] = (stats.cards[d] || 0) + 1; if (prime) stats.primes[n] = 1; }
   function attempt(d, n) {
     var cell = cells[n];
     if (frozen[n]) { sfxSoft(); say(n + " zaten buzlu. Başka bir sayı dene."); return "already"; }
-    if (n === 1) { sfxError(); flash(cell, "shake"); say("1, " + d + DAT[d] + " bölünmez. 1 asal da değil, bileşik de değil.", "err"); return "error"; }
+    if (n === 1) { miss(d, n, false); sfxError(); flash(cell, "shake"); say("1, " + d + DAT[d] + " bölünmez. 1 asal da değil, bileşik de değil.", "err"); return "error"; }
     if (isPrime(n)) {
-      sfxError(); flash(cell, "shake");
+      miss(d, n, true); sfxError(); flash(cell, "shake");
       if (n % d === 0) say(n + " bir asal sayı! Yalnızca 1'e ve kendisine bölünür, buzlanamaz.", "err");
       else say(n + ", " + d + DAT[d] + " tam bölünmez.", "err");
       return "error";
     }
     if (n % d === 0) {
-      frozen[n] = true; cell.classList.add("frozen"); flash(cell, "freezing"); sfxFreeze();
+      stats.ok++; frozen[n] = true; cell.classList.add("frozen"); flash(cell, "freezing"); sfxFreeze();
       say("Doğru! " + n + " ÷ " + d + " = " + (n / d), "ok"); updateCount();
       if (Object.keys(frozen).length === TOTAL) setTimeout(win, 650);
       return "frozen";
     }
-    sfxError(); flash(cell, "shake"); say(n + ", " + d + DAT[d] + " tam bölünmez.", "err");
+    miss(d, n, false); sfxError(); flash(cell, "shake"); say(n + ", " + d + DAT[d] + " tam bölünmez.", "err");
     return "error";
   }
 
   function win() {
     board.classList.add("done"); sfxWin();
     say("Altın renkli sayılar asal sayılardır. Kırmızı 1 asal sayı değildir.", "ok");
+    var pr = Object.keys(stats.primes).map(Number).sort(function (a, b) { return a - b; });
+    var top = Object.keys(stats.cards).sort(function (a, b) { return stats.cards[b] - stats.cards[a]; })[0];
+    var txt = "<b>Özet:</b> " + stats.ok + " doğru, " + stats.bad + " hatalı deneme.";
+    if (pr.length) txt += " Buzlamaya çalıştığın asal sayılar: <b>" + pr.join(", ") + "</b>.";
+    if (top && stats.cards[top] > 1) txt += " En çok şaşırtan kart: <b>" + top + "</b> (" + stats.cards[top] + " hatalı deneme).";
+    if (!stats.bad) txt += " Hiç hata yapmadın! 👏";
+    document.getElementById("winStats").innerHTML = txt;
     overlay.hidden = false;
     document.getElementById("againBtn").focus();
   }
 
   function reset() {
+    stats = { ok: 0, bad: 0, primes: {}, cards: {} };
     frozen = {}; selected = null; board.classList.remove("done"); overlay.hidden = true;
     build(); updateCount(); say("Bir sayı kartını tutup tablodaki bir sayının üstüne bırak.");
   }
@@ -591,7 +603,7 @@ body.intro-open .tray {
 <div class="mbu-sig">Made by Us</div>
 <script>
 (function(){
-  const APP_VERSION='1.1.0';
+  const APP_VERSION='1.2.0';
   const PAGE_URL='https://ekerem.github.io/asal-sayi-avcisi/';
   const btn=document.getElementById('mbuUpd');
   let tEl=null,tTimer=0;
